@@ -13,6 +13,12 @@
     "start": "node script.js",
     "postinstall": "node check-node-version.js"
   },
+  "keywords": [
+    "scrape",
+    "post-text",
+    "post-link",
+    "store xlsx"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/AritraLikhan/pioscrape.git"
