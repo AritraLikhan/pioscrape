@@ -2,6 +2,20 @@ const puppeteer = require('puppeteer');
 const ExcelJS = require('exceljs');
 const path = require('path');
 
+// Function to create a new tab with retry logic
+const createNewTab = async (browser, retries = 3) => {
+    while (retries > 0) {
+        try {
+            return await browser.newPage();
+        } catch (error) {
+            console.error('Error creating a new tab:', error.message);
+            retries -= 1;
+            if (retries === 0) throw error;
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retrying
+        }
+    }
+};
+
 (async () => {
     const email = 'likhan2007092@stud.kuet.ac.bd'; // Replace with your Facebook email
     const password = 'DdX0f_y+c'; // Replace with your Facebook password
@@ -27,7 +41,6 @@ const path = require('path');
 
         let posts = [];
         let seenPosts = new Set();
-        let tab;
 
         while (posts.length < targetPostCount) {
             // Scrape text posts and links
@@ -46,8 +59,8 @@ const path = require('path');
                 if (!seenPosts.has(post.postLink)) {
                     seenPosts.add(post.postLink);
 
-                    // Open the post link in a new tab
-                    tab = await browser.newPage();
+                    // Create a new tab with retry logic
+                    const tab = await createNewTab(browser);
                     await tab.goto(post.postLink, { waitUntil: 'networkidle2' });
 
                     // Extract text from the new tab
