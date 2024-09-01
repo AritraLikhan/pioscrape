@@ -1,7 +1,22 @@
 {
+  "name": "pioscraper",
+  "version": "1.0.0",
+  "description": "A basic library to scrape publicly available Facebook text posts and links to them",
+  "main": "pioscript.js",
   "dependencies": {
     "exceljs": "^4.4.0",
     "puppeteer": "^23.2.1",
     "xlsx": "^0.18.5"
-  }
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node script.js",
+    "postinstall": "node check-node-version.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AritraLikhan/pioscrape.git"
+  },
+  "author": "Aritra Naha Likhan",
+  "license": "MIT"
 }
