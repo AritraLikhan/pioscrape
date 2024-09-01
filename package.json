@@ -1,6 +1,6 @@
 {
   "name": "pioscraper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A basic library to scrape publicly available Facebook text posts and links to them",
   "main": "pioscript.js",
   "dependencies": {
