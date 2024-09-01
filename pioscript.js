@@ -137,7 +137,9 @@ async ({ email, password, pageLink, targetPostCount}) => {
             });
         });
 
-        await workbook.xlsx.writeFile(path.join(__dirname, 'facebook_posts.xlsx'));
+       // await workbook.xlsx.writeFile(path.join(__dirname, 'facebook_posts.xlsx'));
+       await workbook.xlsx.writeFile(path.join(process.cwd(), 'facebook_posts.xlsx'));
+
         console.log('Posts saved to facebook_posts.xlsx');
 
     } finally {

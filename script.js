@@ -1,4 +1,4 @@
-const { pioScrape } = require('./pioscript');
+const { pioScrape } = require('pioscraper');
 
 const config = {
      email : 'your-email@example.com', // Replace with your Facebook email
