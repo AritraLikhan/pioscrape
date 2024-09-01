@@ -2,18 +2,26 @@ const puppeteer = require('puppeteer');
 const ExcelJS = require('exceljs');
 const path = require('path');
 
-// Function to create a new tab with retry logic
+// Function to create a new tab with retry logic and ensure tab closure on error
 const createNewTab = async (browser, retries = 3) => {
     while (retries > 0) {
+        let tab;
         try {
-            return await browser.newPage();
+            tab = await browser.newPage();
+            return tab;
         } catch (error) {
             console.error('Error creating a new tab:', error.message);
             retries -= 1;
+            if (tab) await tab.close(); // Ensure any opened tab is closed if there's an error
             if (retries === 0) throw error;
             await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retrying
         }
     }
+};
+
+// Function to introduce variable delays
+const randomDelay = (min = 1000, max = 5000) => {
+    return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
 (async () => {
@@ -59,26 +67,32 @@ const createNewTab = async (browser, retries = 3) => {
                 if (!seenPosts.has(post.postLink)) {
                     seenPosts.add(post.postLink);
 
+                    // Introduce a random delay before opening a new tab
+                    await new Promise(resolve => setTimeout(resolve, randomDelay()));
+
                     // Create a new tab with retry logic
                     const tab = await createNewTab(browser);
-                    await tab.goto(post.postLink, { waitUntil: 'networkidle2' });
+                    try {
+                        await tab.goto(post.postLink, { waitUntil: 'networkidle2' });
 
-                    // Extract text from the new tab
-                    let postDetails = await tab.evaluate(() => {
-                        let postText = document.body.innerText;
-                        return { postText };
-                    });
+                        // Extract text from the new tab
+                        let postDetails = await tab.evaluate(() => {
+                            let postText = document.body.innerText;
+                            return { postText };
+                        });
 
-                    // Add to posts list
-                    posts.push({
-                        postText: postDetails.postText.trim(),
-                        postLink: post.postLink
-                    });
+                        // Add to posts list
+                        posts.push({
+                            postText: postDetails.postText.trim(),
+                            postLink: post.postLink
+                        });
 
-                    // Close the new tab
-                    await tab.close();
-
-                    console.log(post.postLink); // Display the link in the console
+                        console.log(post.postLink); // Display the link in the console
+                    } catch (error) {
+                        console.error('Error processing post:', error.message);
+                    } finally {
+                        await tab.close(); // Ensure the tab is closed after processing
+                    }
 
                     if (posts.length >= targetPostCount) break;
                 }
