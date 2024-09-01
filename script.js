@@ -1,4 +1,3 @@
-const { scrapeFacebook } = require('./facebookScraper');
 const { pioScrape } = require('./pioscript');
 
 const config = {
