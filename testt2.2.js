@@ -11,7 +11,8 @@ const path = require('path');
     // Launch Puppeteer
     const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
     const [page] = await browser.pages();
-    try{
+
+    try {
         // Navigate to Facebook and log in
         await page.goto('https://www.facebook.com/', { waitUntil: 'networkidle2' });
         await page.type('#email', email);
@@ -24,26 +25,93 @@ const path = require('path');
         // Navigate to the desired page
         await page.goto(pageLink, { waitUntil: 'networkidle2' });
 
-  // Scroll down to load more posts
-  const numberOfScrolls = 3; // Number of times you want to scroll down
-  for (let i = 0; i < numberOfScrolls; i++) {
-    await page.evaluate(() => {
-        window.scrollTo(0, document.body.scrollHeight);
-    });
-    await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for posts to load
-  }
+        let posts = [];
+        let seenPosts = new Set();
+        let tab;
 
-  // Click "See more" to expand texts
-  await page.evaluate(() => {
-    const seeMoreElements = Array.from(document.querySelectorAll('span')).filter(el => el.textContent === 'See more');
-    seeMoreElements.forEach(el => el.click());
-    
-  });
+        while (posts.length < targetPostCount) {
+            // Scrape text posts and links
+            let postElements = await page.evaluate(() => {
+                return Array.from(document.querySelectorAll('div.x1yztbdb.x1n2onr6.xh8yej3.x1ja2u2z'))
+                    .map(el => {
+                        let postText = el.innerText.trim();
+                        let linkElement = el.querySelector('a[href*="/posts/"]');
+                        let postLink = linkElement ? linkElement.href : null;
+                        return { postText, postLink };
+                    })
+                    .filter(post => post.postText !== '' && post.postLink);
+            });
 
-  // Continue with scraping or other tasks
-}
-finally{
-    await browser.close();
-}
- 
+            for (let post of postElements) {
+                if (!seenPosts.has(post.postLink)) {
+                    seenPosts.add(post.postLink);
+
+                    // Open the post link in a new tab
+                    tab = await browser.newPage();
+                    await tab.goto(post.postLink, { waitUntil: 'networkidle2' });
+
+                    // Extract text from the new tab
+                    let postDetails = await tab.evaluate(() => {
+                        let postText = document.body.innerText;
+                        return { postText };
+                    });
+
+                    // Add to posts list
+                    posts.push({
+                        postText: postDetails.postText.trim(),
+                        postLink: post.postLink
+                    });
+
+                    // Close the new tab
+                    await tab.close();
+
+                    console.log(post.postLink); // Display the link in the console
+
+                    if (posts.length >= targetPostCount) break;
+                }
+            }
+
+            if (posts.length >= targetPostCount) break;
+
+            // Scroll down to load more posts
+            await page.evaluate(() => {
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+            await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for posts to load
+        }
+
+        // Convert to Array and limit to the target post count
+        posts = posts.slice(0, targetPostCount);
+
+        // Save posts to an Excel file
+        let workbook = new ExcelJS.Workbook();
+        let worksheet = workbook.addWorksheet('Posts');
+        worksheet.columns = [
+            { header: 'Post Text', key: 'text', width: 100 },
+            { header: 'Link', key: 'link', width: 50 }
+        ];
+
+        posts.forEach(post => {
+            let firstPeriodIndex = post.postText.indexOf(" · ");
+            let allReactionsIndex = post.postText.indexOf("All reactions");
+
+            if (firstPeriodIndex !== -1) {
+                post.postText = post.postText.substring(firstPeriodIndex);
+                if (allReactionsIndex !== -1) {
+                    post.postText = post.postText.substring(0, post.postText.indexOf("All reactions")).trim();
+                }
+            }
+
+            worksheet.addRow({
+                text: post.postText,
+                link: post.postLink
+            });
+        });
+
+        await workbook.xlsx.writeFile(path.join(__dirname, 'facebook_posts.xlsx'));
+        console.log('Posts saved to facebook_posts.xlsx');
+
+    } finally {
+        await browser.close();
+    }
 })();
